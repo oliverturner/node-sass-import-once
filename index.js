@@ -156,13 +156,6 @@ var parseJSON = function parseJSON(data, filename) {
   var fileReturn = '$' + path.basename(filename).replace(path.extname(filename), '') + ':',
       colors;
 
-  data = data.toString();
-
-  if ([ '.yml', '.yaml' ].indexOf(path.extname(filename)) !== -1) {
-    data = yaml.safeLoad(data);
-    data = JSON.stringify(data);
-  }
-
   data = data.replace(/\{/g, '(');
   data = data.replace(/\[/g, '(');
   data = data.replace(/\}/g, ')');
@@ -221,6 +214,7 @@ var readFirstFile = function readFirstFile(uri, filenames, css, cb, examinedFile
   var filename = filenames.shift();
   examinedFiles = examinedFiles || [];
   examinedFiles.push(filename);
+
   fs.readFile(filename, function(err, data) {
     if (err) {
       if (filenames.length) {
@@ -232,8 +226,22 @@ var readFirstFile = function readFirstFile(uri, filenames, css, cb, examinedFile
     }
     else {
       if ([ '.js', '.json', '.yml', '.yaml' ].indexOf(path.extname(filename)) !== -1) {
-        data = parseJSON(data, filename);
+        switch (path.extname(filename)) {
+          case '.js':
+            data = parseJSON(JSON.stringify(require(filename)), filename);
+            break;
+
+          case '.yml':
+          case '.yaml':
+            data = parseJSON(JSON.stringify(yaml.safeLoad(data.toString())), filename);
+            break;
+
+          default:
+            data = parseJSON(data.toString(), filename);
+            break;
+        }
       }
+
       cb(null, {
         'contents': data.toString(),
         'file': filename
